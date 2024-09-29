@@ -23,7 +23,10 @@
 """
 
 import os
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
 from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 
@@ -32,12 +35,19 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class GeoCAT_AnalysisDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
+<<<<<<< HEAD
 
     closingPlugin = pyqtSignal()
+=======
+    # Sinais
+    closingPlugin = pyqtSignal()
+    cellSizeChanged = pyqtSignal(int)  # Novo sinal para mudança no tamanho da célula
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
 
     def __init__(self, parent=None):
         """Constructor."""
         super(GeoCAT_AnalysisDockWidget, self).__init__(parent)
+<<<<<<< HEAD
         # Set up the user interface from Designer.
         # After setupUI you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see
@@ -48,3 +58,24 @@ class GeoCAT_AnalysisDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
+=======
+        self.setupUi(self)
+
+        # Conectar eventos de widgets
+        self.cellSizeInput.textChanged.connect(self.on_cell_size_changed)  # Exemplo para monitorar mudanças de tamanho
+
+    def on_cell_size_changed(self):
+        """Emite o sinal quando o tamanho da célula muda."""
+        try:
+            cell_size = int(self.cellSizeInput.text())  # Certifique-se de que o campo é válido
+            self.cellSizeChanged.emit(cell_size)
+        except ValueError:
+            # Caso o valor inserido não seja um número válido
+            self.cellSizeChanged.emit(2000)  # Valor padrão
+
+    def closeEvent(self, event):
+        """Emite o sinal quando o dock widget é fechado."""
+        self.closingPlugin.emit()
+        event.accept()
+
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)

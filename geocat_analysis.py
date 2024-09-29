@@ -16,10 +16,20 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
+<<<<<<< HEAD
 from qgis.core import QgsProject, QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsRectangle
 import csv
 import os.path
 
+=======
+from qgis.core import QgsProject, QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsRectangle, QgsSpatialIndex
+import csv
+import os.path
+
+# Importando a classe GeoCAT_AnalysisDockWidget do arquivo correto
+from .geocat_analysis_dockwidget import GeoCAT_AnalysisDockWidget
+
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
 class GeoCAT_Analysis:
     """QGIS Plugin Implementation."""
 
@@ -106,11 +116,19 @@ class GeoCAT_Analysis:
             self.dockwidget.show()
 
     def import_csv(self):
+<<<<<<< HEAD
+=======
+        """Handle the CSV import process."""
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
         file_path, _ = QFileDialog.getOpenFileName(None, 'Open CSV File', '', 'CSV Files (*.csv)')
         if file_path:
             self.load_csv_data(file_path)
 
     def load_csv_data(self, file_path):
+<<<<<<< HEAD
+=======
+        """Load CSV data and create an occurrence layer."""
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
         try:
             with open(file_path, newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
@@ -121,6 +139,10 @@ class GeoCAT_Analysis:
             self.iface.messageBar().pushMessage(f"Error importing CSV: {str(e)}", level=3)
 
     def create_occurrence_layer(self, data):
+<<<<<<< HEAD
+=======
+        """Create a layer for species occurrences based on the CSV data."""
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
         layer = QgsVectorLayer('Point?crs=EPSG:4326', 'Species Occurrences', 'memory')
         provider = layer.dataProvider()
         provider.addAttributes([QgsField('Scientific_Name', QVariant.String)])
@@ -140,6 +162,10 @@ class GeoCAT_Analysis:
         QgsProject.instance().addMapLayer(layer)
 
     def calculate_eoo(self):
+<<<<<<< HEAD
+=======
+        """Calculate Extent of Occurrence (EOO) using Convex Hull."""
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
         layers = QgsProject.instance().mapLayersByName("Species Occurrences")
         if not layers:
             self.iface.messageBar().pushMessage("No 'Species Occurrences' layer found!", level=2)
@@ -166,6 +192,10 @@ class GeoCAT_Analysis:
         self.iface.messageBar().pushMessage(f"EOO Calculated: {convex_hull.area():.2f} units²", level=0)
 
     def calculate_aoo(self, cell_size=2000):
+<<<<<<< HEAD
+=======
+        """Calculate Area of Occupancy (AOO) using grid cells."""
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
         layers = QgsProject.instance().mapLayersByName("Species Occurrences")
         if not layers:
             self.iface.messageBar().pushMessage("No 'Species Occurrences' layer found!", level=2)
@@ -183,6 +213,12 @@ class GeoCAT_Analysis:
         provider = aoo_layer.dataProvider()
         aoo_count = 0
 
+<<<<<<< HEAD
+=======
+        # Criando índice espacial para melhorar performance
+        spatial_index = QgsSpatialIndex(layer.getFeatures())
+
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
         for i in range(grid_x):
             for j in range(grid_y):
                 x0 = xmin + i * cell_size
@@ -190,6 +226,7 @@ class GeoCAT_Analysis:
                 rect = QgsRectangle(x0, y0, x0 + cell_size, y0 + cell_size)
                 cell_geom = QgsGeometry.fromRect(rect)
 
+<<<<<<< HEAD
                 for feature in layer.getFeatures():
                     if cell_geom.intersects(feature.geometry()):
                         aoo_count += 1
@@ -199,3 +236,13 @@ class GeoCAT_Analysis:
         QgsProject.instance().addMapLayer(aoo_layer)
         self.iface.messageBar().pushMessage(f"AOO Calculated: {aoo_count * (cell_size ** 2):.2f} units²", level=0)
 
+=======
+                # Usando índice espacial para encontrar interseções
+                intersecting_ids = spatial_index.intersects(rect)
+                if intersecting_ids:
+                    aoo_count += 1
+                    provider.addFeature(QgsFeature(cell_geom))
+
+        QgsProject.instance().addMapLayer(aoo_layer)
+        self.iface.messageBar().pushMessage(f"AOO Calculated: {aoo_count * (cell_size ** 2):.2f} units²", level=0)
+>>>>>>> 5b69d0c (Primeiro commit - adicionando plugin GeoCATer)
