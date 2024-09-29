@@ -12,134 +12,45 @@
         email                : camposds1@yahoo.com.br
  ***************************************************************************/
 
-/***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QVariant
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
-# Initialize Qt resources from file resources.py
-from .resources import *
-
-# Import the code for the DockWidget
-from .geocat_analysis_dockwidget import GeoCAT_AnalysisDockWidget
+from qgis.PyQt.QtWidgets import QAction, QFileDialog
+from qgis.core import QgsProject, QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsRectangle
+import csv
 import os.path
-
 
 class GeoCAT_Analysis:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
-        """Constructor.
-
-        :param iface: An interface instance that will be passed to this class
-            which provides the hook by which you can manipulate the QGIS
-            application at run time.
-        :type iface: QgsInterface
-        """
-        # Save reference to the QGIS interface
+        """Constructor."""
         self.iface = iface
-
-        # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
 
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'GeoCAT_Analysis_{}.qm'.format(locale))
+        locale_path = os.path.join(self.plugin_dir, 'i18n', 'GeoCAT_Analysis_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
-        # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&GeoCATer')
-        # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'GeoCAT_Analysis')
         self.toolbar.setObjectName(u'GeoCAT_Analysis')
-
-        #print "** INITIALIZING GeoCAT_Analysis"
 
         self.pluginIsActive = False
         self.dockwidget = None
 
-
-    # noinspection PyMethodMayBeStatic
     def tr(self, message):
-        """Get the translation for a string using Qt translation API.
-
-        We implement this ourselves since we do not inherit QObject.
-
-        :param message: String for translation.
-        :type message: str, QString
-
-        :returns: Translated version of message.
-        :rtype: QString
-        """
-        # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
+        """Get the translation for a string using Qt translation API."""
         return QCoreApplication.translate('GeoCAT_Analysis', message)
 
-
-    def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
-        """Add a toolbar icon to the toolbar.
-
-        :param icon_path: Path to the icon for this action. Can be a resource
-            path (e.g. ':/plugins/foo/bar.png') or a normal file system path.
-        :type icon_path: str
-
-        :param text: Text that should be shown in menu items for this action.
-        :type text: str
-
-        :param callback: Function to be called when the action is triggered.
-        :type callback: function
-
-        :param enabled_flag: A flag indicating if the action should be enabled
-            by default. Defaults to True.
-        :type enabled_flag: bool
-
-        :param add_to_menu: Flag indicating whether the action should also
-            be added to the menu. Defaults to True.
-        :type add_to_menu: bool
-
-        :param add_to_toolbar: Flag indicating whether the action should also
-            be added to the toolbar. Defaults to True.
-        :type add_to_toolbar: bool
-
-        :param status_tip: Optional text to show in a popup when mouse pointer
-            hovers over the action.
-        :type status_tip: str
-
-        :param parent: Parent widget for the new action. Defaults None.
-        :type parent: QWidget
-
-        :param whats_this: Optional text to show in the status bar when the
-            mouse pointer hovers over the action.
-
-        :returns: The action that was created. Note that the action is also
-            added to self.actions list.
-        :rtype: QAction
-        """
-
+    def add_action(self, icon_path, text, callback, enabled_flag=True, add_to_menu=True, add_to_toolbar=True, status_tip=None, whats_this=None, parent=None):
+        """Add a toolbar icon to the toolbar."""
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
         action.triggered.connect(callback)
@@ -155,185 +66,136 @@ class GeoCAT_Analysis:
             self.toolbar.addAction(action)
 
         if add_to_menu:
-            self.iface.addPluginToMenu(
-                self.menu,
-                action)
+            self.iface.addPluginToMenu(self.menu, action)
 
         self.actions.append(action)
-
         return action
 
-
     def initGui(self):
-    """Create the menu entries and toolbar icons inside the QGIS GUI."""
+        """Create the menu entries and toolbar icons inside the QGIS GUI."""
+        icon_path_csv = ':/plugins/geocat_analysis/icon.png'
+        self.add_action(icon_path_csv, text=self.tr(u'Import CSV'), callback=self.import_csv, parent=self.iface.mainWindow())
 
-    # Icon for CSV Import
-    icon_path_csv = ':/plugins/geocat_analysis/icon.png'
-    self.add_action(
-        icon_path_csv,
-        text=self.tr(u'Import CSV'),
-        callback=self.import_csv,
-        parent=self.iface.mainWindow()
-    )
+        icon_path_eoo = ':/plugins/geocat_analysis/icon_eoo.png'
+        self.add_action(icon_path_eoo, text=self.tr(u'Calculate EOO'), callback=self.calculate_eoo, parent=self.iface.mainWindow())
 
-    # Icon for EOO Calculation
-    icon_path_eoo = ':/plugins/geocat_analysis/icon_eoo.png'
-    self.add_action(
-        icon_path_eoo,
-        text=self.tr(u'Calculate EOO'),
-        callback=self.calculate_eoo,
-        parent=self.iface.mainWindow()
-    )
-
-    # Icon for AOO Calculation
-    icon_path_aoo = ':/plugins/geocat_analysis/icon_aoo.png'
-    self.add_action(
-        icon_path_aoo,
-        text=self.tr(u'Calculate AOO'),
-        callback=self.calculate_aoo,
-        parent=self.iface.mainWindow()
-    )
-
-
-    #--------------------------------------------------------------------------
+        icon_path_aoo = ':/plugins/geocat_analysis/icon_aoo.png'
+        self.add_action(icon_path_aoo, text=self.tr(u'Calculate AOO'), callback=self.calculate_aoo, parent=self.iface.mainWindow())
 
     def onClosePlugin(self):
-        """Cleanup necessary items here when plugin dockwidget is closed"""
-
-        #print "** CLOSING GeoCAT_Analysis"
-
-        # disconnects
-        self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
-
-        # remove this statement if dockwidget is to remain
-        # for reuse if plugin is reopened
-        # Commented next statement since it causes QGIS crashe
-        # when closing the docked window:
-        # self.dockwidget = None
-
+        """Cleanup necessary items here when plugin dockwidget is closed."""
+        if self.dockwidget:
+            self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
         self.pluginIsActive = False
-
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
-
-        #print "** UNLOAD GeoCAT_Analysis"
-
         for action in self.actions:
-            self.iface.removePluginMenu(
-                self.tr(u'&GeoCATer'),
-                action)
+            self.iface.removePluginMenu(self.tr(u'&GeoCATer'), action)
             self.iface.removeToolBarIcon(action)
-        # remove the toolbar
         del self.toolbar
 
-    #--------------------------------------------------------------------------
-
     def run(self):
-        """Run method that loads and starts the plugin"""
-
+        """Run method that loads and starts the plugin."""
         if not self.pluginIsActive:
             self.pluginIsActive = True
-
-            #print "** STARTING GeoCAT_Analysis"
-
-            # dockwidget may not exist if:
-            #    first run of plugin
-            #    removed on close (see self.onClosePlugin method)
-            if self.dockwidget == None:
-                # Create the dockwidget (after translation) and keep reference
+            if self.dockwidget is None:
                 self.dockwidget = GeoCAT_AnalysisDockWidget()
-
-            # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
-
-            # show the dockwidget
-            # TODO: fix to allow choice of dock location
             self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
-            
+
     def import_csv(self):
-    file_path, _ = QFileDialog.getOpenFileName(None, 'Open CSV File', '', 'CSV Files (*.csv)')
-    if file_path:
-        self.load_csv_data(file_path)
+        file_path, _ = QFileDialog.getOpenFileName(None, 'Open CSV File', '', 'CSV Files (*.csv)')
+        if file_path:
+            self.load_csv_data(file_path)
 
-def load_csv_data(self, file_path):
-    with open(file_path, newline='', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        data = [row for row in reader]
-        self.create_occurrence_layer(data)
+    def load_csv_data(self, file_path):
+        try:
+            with open(file_path, newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                data = [row for row in reader]
+                self.create_occurrence_layer(data)
+            self.iface.messageBar().pushMessage("CSV successfully imported!", level=0)
+        except Exception as e:
+            self.iface.messageBar().pushMessage(f"Error importing CSV: {str(e)}", level=3)
 
-def create_occurrence_layer(self, data):
-    layer = QgsVectorLayer('Point?crs=EPSG:4326', 'Species Occurrences', 'memory')
-    provider = layer.dataProvider()
+    def create_occurrence_layer(self, data):
+        layer = QgsVectorLayer('Point?crs=EPSG:4326', 'Species Occurrences', 'memory')
+        provider = layer.dataProvider()
+        provider.addAttributes([QgsField('Scientific_Name', QVariant.String)])
+        layer.updateFields()
 
-    # Add a field for scientific names
-    provider.addAttributes([QgsField('Scientific_Name', QVariant.String)])
-    layer.updateFields()
+        for row in data:
+            if row['Latitude'] and row['Longitude']:
+                latitude = float(row['Latitude'])
+                longitude = float(row['Longitude'])
+                point = QgsPointXY(longitude, latitude)
 
-    # Add points based on Latitude and Longitude
-    for row in data:
-        if row['Latitude'] and row['Longitude']:
-            latitude = float(row['Latitude'])
-            longitude = float(row['Longitude'])
-            point = QgsPointXY(longitude, latitude)
+                feature = QgsFeature()
+                feature.setGeometry(QgsGeometry.fromPointXY(point))
+                feature.setAttributes([row['Especie']])
+                provider.addFeature(feature)
 
-            feature = QgsFeature()
-            feature.setGeometry(QgsGeometry.fromPointXY(point))
-            feature.setAttributes([row['Especie']])
-            provider.addFeature(feature)
+        QgsProject.instance().addMapLayer(layer)
 
-    QgsProject.instance().addMapLayer(layer)
-        
-        def calculate_eoo(self):
-    layer = QgsProject.instance().mapLayersByName("Species Occurrences")[0]  # Get the occurrence layer
-    geometries = [feature.geometry() for feature in layer.getFeatures()]
+    def calculate_eoo(self):
+        layers = QgsProject.instance().mapLayersByName("Species Occurrences")
+        if not layers:
+            self.iface.messageBar().pushMessage("No 'Species Occurrences' layer found!", level=2)
+            return
 
-    # Perform a union of all geometries and compute Convex Hull
-    union_geometry = QgsGeometry.unaryUnion(geometries)
-    convex_hull = union_geometry.convexHull()
+        layer = layers[0]
+        geometries = [feature.geometry() for feature in layer.getFeatures()]
 
-    # Create a new layer to hold the EOO polygon
-    eoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'EOO Polygon', 'memory')
-    provider = eoo_layer.dataProvider()
+        if not geometries:
+            self.iface.messageBar().pushMessage("No geometries found in 'Species Occurrences' layer!", level=2)
+            return
 
-    # Add the EOO polygon feature
-    feature = QgsFeature()
-    feature.setGeometry(convex_hull)
-    provider.addFeature(feature)
+        union_geometry = QgsGeometry.unaryUnion(geometries)
+        convex_hull = union_geometry.convexHull()
 
-    QgsProject.instance().addMapLayer(eoo_layer)
-    self.iface.messageBar().pushMessage(f"EOO Calculated: {convex_hull.area():.2f} units²", level=0)
+        eoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'EOO Polygon', 'memory')
+        provider = eoo_layer.dataProvider()
 
-	def calculate_aoo(self, cell_size=2000):
-    layer = QgsProject.instance().mapLayersByName("Species Occurrences")[0]  # Get the occurrence layer
-    extent = layer.extent()
+        feature = QgsFeature()
+        feature.setGeometry(convex_hull)
+        provider.addFeature(feature)
 
-    xmin, ymin, xmax, ymax = extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum()
+        QgsProject.instance().addMapLayer(eoo_layer)
+        self.iface.messageBar().pushMessage(f"EOO Calculated: {convex_hull.area():.2f} units²", level=0)
 
-    grid_x = int((xmax - xmin) / cell_size) + 1
-    grid_y = int((ymax - ymin) / cell_size) + 1
+    def calculate_aoo(self, cell_size=2000):
+        layers = QgsProject.instance().mapLayersByName("Species Occurrences")
+        if not layers:
+            self.iface.messageBar().pushMessage("No 'Species Occurrences' layer found!", level=2)
+            return
 
-    # Create grid
-    aoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'AOO Grid', 'memory')
-    provider = aoo_layer.dataProvider()
-    aoo_count = 0
+        layer = layers[0]
+        extent = layer.extent()
 
-    for i in range(grid_x):
-        for j in range(grid_y):
-            x0 = xmin + i * cell_size
-            y0 = ymin + j * cell_size
-            rect = QgsRectangle(x0, y0, x0 + cell_size, y0 + cell_size)
-            cell_geom = QgsGeometry.fromRect(rect)
+        xmin, ymin, xmax, ymax = extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum()
 
-            # Check if any occurrences fall inside the grid cell
-            for feature in layer.getFeatures():
-                if cell_geom.intersects(feature.geometry()):
-                    aoo_count += 1
-                    provider.addFeature(QgsFeature(cell_geom))
-                    break
+        grid_x = int((xmax - xmin) / cell_size) + 1
+        grid_y = int((ymax - ymin) / cell_size) + 1
 
-    QgsProject.instance().addMapLayer(aoo_layer)
-    self.iface.messageBar().pushMessage(f"AOO Calculated: {aoo_count * (cell_size ** 2):.2f} units²", level=0)
+        aoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'AOO Grid', 'memory')
+        provider = aoo_layer.dataProvider()
+        aoo_count = 0
 
+        for i in range(grid_x):
+            for j in range(grid_y):
+                x0 = xmin + i * cell_size
+                y0 = ymin + j * cell_size
+                rect = QgsRectangle(x0, y0, x0 + cell_size, y0 + cell_size)
+                cell_geom = QgsGeometry.fromRect(rect)
+
+                for feature in layer.getFeatures():
+                    if cell_geom.intersects(feature.geometry()):
+                        aoo_count += 1
+                        provider.addFeature(QgsFeature(cell_geom))
+                        break
+
+        QgsProject.instance().addMapLayer(aoo_layer)
+        self.iface.messageBar().pushMessage(f"AOO Calculated: {aoo_count * (cell_size ** 2):.2f} units²", level=0)
 
