@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'GeoCAT_Analysis'
-copyright = u'2013, Diego Sousa Campos'
+copyright = u'2024, Diego Sousa Campos'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

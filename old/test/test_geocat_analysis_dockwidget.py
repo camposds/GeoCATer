@@ -14,9 +14,7 @@ __copyright__ = 'Copyright 2024, Diego Sousa Campos'
 
 import unittest
 
-from qgis.PyQt.QtGui import QDockWidget
-
-from geocat_analysis_dockwidget import GeoCAT_AnalysisDockWidget
+from old.geocat_analysis_dockwidget import GeoCAT_AnalysisDockWidget
 
 from utilities import get_qgis_app
 
