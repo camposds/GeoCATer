@@ -1,0 +1,50 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=GeoCATer
+qgisMinimumVersion=3.0
+description=Plugin to calculate EOO and AOO for species threat status in conservation studies 
+version=0.1
+author=Diego Sousa Campos
+email=diegosousa.campos@gmail.com
+
+about=Provide a brief description of the plugin and its purpose.GeoCATer is a QGIS plugin developed to facilitate geospatial conservation assessments, specifically designed for conservationists, ecologists, and GIS professionals. It provides an efficient way to calculate two key metrics for biodiversity assessments in line with the guidelines of the International Union for Conservation of Nature (IUCN): Extent of Occurrence (EOO) and Area of Occupancy (AOO). The plugin allows users to import species occurrence data from CSV files and automatically calculates EOO using the Convex Hull method, as well as AOO by generating a customizable grid. Key features include: Easy CSV import for species occurrence data, including coordinates and scientific names. Automatic calculation of EOO with visualization of the generated polygon. AOO calculation using a customizable grid (default size: 2x2 km), displaying occupied grid cells. Export of results (EOO and AOO polygons) in standard GIS formats like shapefiles. User-friendly interface with direct integration into the QGIS environment. Requirements: QGIS version 3.10 or higher. Python 3.x. This plugin aims to streamline the workflow for professionals conducting conservation assessments, offering a quick and straightforward approach to generating essential biodiversity metrics directly within QGIS.
+
+tracker=https://github.com/camposds/GeoCATer/issues
+
+repository=https://github.com/camposds/GeoCATer
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=conservation, biodiversity, EOO, AOO, species, GIS, geospatial, ecology, IUCN, CSV, metrics, plugin
+
+
+homepage=https://github.com/camposds/GeoCATer
+
+category=Plugins
+icon=icon.png
+# experimental flag
+experimental=True
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
+# Since QGIS 3.8, a comma separated list of plugins to be installed
+# (or upgraded) can be specified.
+# Check the documentation for more information.
+# plugin_dependencies=
+
+Category of the plugin: Raster, Vector, Database or Web
+# category=
+
+# If the plugin can run on QGIS Server.
+server=False
+
