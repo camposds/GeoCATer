@@ -155,111 +155,106 @@ class GeoCATer:
         QMessageBox.information(self.iface.mainWindow(), "GeoCATer", "Plugin GeoCATer is running!")
 
         from qgis.core import QgsProject, QgsGeometry, QgsFeatureRequest, QgsVectorLayer, QgsField, QgsRectangle, \
-            QgsCoordinateReferenceSystem, QgsFeature
+            QgsCoordinateReferenceSystem, QgsFeature, QgsWkbTypes
         from PyQt5.QtCore import QVariant
         from qgis import processing
 
-        class GeoCATer:
-            # (restante do código...)
+        # Obter a camada ativa no QGIS
+        layer = self.iface.activeLayer()
 
-            def run(self):
-                """Run method that performs all the real work"""
-                # Obter a camada ativa no QGIS
-                layer = self.iface.activeLayer()
+        if layer is None or not isinstance(layer, QgsVectorLayer):
+            QMessageBox.critical(self.iface.mainWindow(), "GeoCATer",
+                                 "Nenhuma camada de pontos ativa foi encontrada.")
+            return
 
-                if layer is None or not isinstance(layer, QgsVectorLayer):
-                    QMessageBox.critical(self.iface.mainWindow(), "GeoCATer",
-                                         "Nenhuma camada de pontos ativa foi encontrada.")
-                    return
+        # Verificar se é uma camada de pontos
+        if layer.geometryType() != QgsWkbTypes.PointGeometry:
+            QMessageBox.critical(self.iface.mainWindow(), "GeoCATer",
+                                 "A camada ativa não é uma camada de pontos.")
+            return
 
-                # Verificar se é uma camada de pontos
-                if layer.geometryType() != QgsWkbTypes.PointGeometry:
-                    QMessageBox.critical(self.iface.mainWindow(), "GeoCATer",
-                                         "A camada ativa não é uma camada de pontos.")
-                    return
+        # Calcular o EOO (Convex Hull)
+        self.calculate_eoo(layer)
 
-                # Calcular o EOO (Convex Hull)
-                self.calculate_eoo(layer)
+        # Calcular o AOO
+        self.calculate_aoo(layer)
 
-                # Calcular o AOO
-                self.calculate_aoo(layer)
+    def calculate_eoo(self, layer):
+        """Calcula o Extent of Occurrence (EOO) usando Convex Hull"""
+        features = [f for f in layer.getFeatures()]
+        geometries = [f.geometry() for f in features if f.geometry() is not None]
 
-            def calculate_eoo(self, layer):
-                """Calcula o Extent of Occurrence (EOO) usando Convex Hull"""
-                features = [f for f in layer.getFeatures()]
-                geometries = [f.geometry() for f in features if f.geometry() is not None]
+        if not geometries:
+            QMessageBox.warning(self.iface.mainWindow(), "GeoCATer", "Nenhuma geometria válida encontrada.")
+            return
 
-                if not geometries:
-                    QMessageBox.warning(self.iface.mainWindow(), "GeoCATer", "Nenhuma geometria válida encontrada.")
-                    return
+        # Combina todas as geometrias em uma MultiPointGeometry
+        multipoint = QgsGeometry.unaryUnion(geometries)
 
-                # Combina todas as geometrias em uma MultiPointGeometry
-                multipoint = QgsGeometry.unaryUnion(geometries)
+        # Calcular o Convex Hull
+        convex_hull = multipoint.convexHull()
 
-                # Calcular o Convex Hull
-                convex_hull = multipoint.convexHull()
+        # Criar uma nova camada para o EOO
+        eoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'EOO', 'memory')
+        prov = eoo_layer.dataProvider()
+        prov.addAttributes([QgsField('ID', QVariant.Int)])
+        eoo_layer.updateFields()
 
-                # Criar uma nova camada para o EOO
-                eoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'EOO', 'memory')
-                prov = eoo_layer.dataProvider()
-                prov.addAttributes([QgsField('ID', QVariant.Int)])
-                eoo_layer.updateFields()
+        # Adicionar o Convex Hull como uma nova feição
+        feat = QgsFeature()
+        feat.setGeometry(convex_hull)
+        feat.setAttributes([1])  # Atributo ID com valor 1
+        prov.addFeature(feat)
 
-                # Adicionar o Convex Hull como uma nova feição
-                feat = QgsFeature()
-                feat.setGeometry(convex_hull)
-                feat.setAttributes([1])  # Atributo ID com valor 1
-                prov.addFeature(feat)
+        # Adicionar a camada ao projeto
+        QgsProject.instance().addMapLayer(eoo_layer)
 
-                # Adicionar a camada ao projeto
-                QgsProject.instance().addMapLayer(eoo_layer)
+        QMessageBox.information(self.iface.mainWindow(), "GeoCATer",
+                                "EOO (Convex Hull) calculado e adicionado ao mapa.")
 
-                QMessageBox.information(self.iface.mainWindow(), "GeoCATer",
-                                        "EOO (Convex Hull) calculado e adicionado ao mapa.")
+    def calculate_aoo(self, layer, grid_size_km=2):
+        """Calcula o Area of Occupancy (AOO) baseado em uma grade de tamanho customizável"""
+        extent = layer.extent()
 
-            def calculate_aoo(self, layer, grid_size_km=2):
-                """Calcula o Area of Occupancy (AOO) baseado em uma grade de tamanho customizável"""
-                extent = layer.extent()
+        # Converte o tamanho da célula de quilômetros para graus decimais (simplificação)
+        cell_size_deg = grid_size_km / 111  # Aproximadamente 111 km por grau
 
-                # Converte o tamanho da célula de quilômetros para graus decimais (simplificação)
-                cell_size_deg = grid_size_km / 111  # Aproximadamente 111 km por grau
+        # Criar uma grade cobrindo a extensão da camada de pontos
+        grid_params = {
+            'TYPE': 2,  # Grid Polygons
+            'EXTENT': extent,
+            'HSPACING': cell_size_deg,
+            'VSPACING': cell_size_deg,
+            'CRS': layer.crs(),
+            'OUTPUT': 'memory:'
+        }
 
-                # Criar uma grade cobrindo a extensão da camada de pontos
-                grid_params = {
-                    'TYPE': 2,  # Grid Polygons
-                    'EXTENT': extent,
-                    'HSPACING': cell_size_deg,
-                    'VSPACING': cell_size_deg,
-                    'CRS': layer.crs(),
-                    'OUTPUT': 'memory:'
-                }
+        grid_layer = processing.run("qgis:creategrid", grid_params)['OUTPUT']
 
-                grid_layer = processing.run("qgis:creategrid", grid_params)['OUTPUT']
+        # Criar a camada de saída para AOO
+        aoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'AOO', 'memory')
+        prov = aoo_layer.dataProvider()
+        prov.addAttributes([QgsField('ID', QVariant.Int), QgsField('Occupied', QVariant.Int)])
+        aoo_layer.updateFields()
 
-                # Criar a camada de saída para AOO
-                aoo_layer = QgsVectorLayer('Polygon?crs=EPSG:4326', 'AOO', 'memory')
-                prov = aoo_layer.dataProvider()
-                prov.addAttributes([QgsField('ID', QVariant.Int), QgsField('Occupied', QVariant.Int)])
-                aoo_layer.updateFields()
+        # Verificar quais células da grade têm ocorrências
+        for cell in grid_layer.getFeatures():
+            cell_geom = cell.geometry()
+            request = QgsFeatureRequest().setFilterRect(cell_geom.boundingBox())
+            count = 0
+            for feat in layer.getFeatures(request):
+                if cell_geom.intersects(feat.geometry()):
+                    count += 1
 
-                # Verificar quais células da grade têm ocorrências
-                for cell in grid_layer.getFeatures():
-                    cell_geom = cell.geometry()
-                    request = QgsFeatureRequest().setFilterRect(cell_geom.boundingBox())
-                    count = 0
-                    for feat in layer.getFeatures(request):
-                        if cell_geom.intersects(feat.geometry()):
-                            count += 1
+            # Adicionar células ocupadas à camada de AOO
+            if count > 0:
+                new_feat = QgsFeature()
+                new_feat.setGeometry(cell_geom)
+                new_feat.setAttributes([cell.id(), 1])  # Marca como "Occupied"
+                prov.addFeature(new_feat)
 
-                    # Adicionar células ocupadas à camada de AOO
-                    if count > 0:
-                        new_feat = QgsFeature()
-                        new_feat.setGeometry(cell_geom)
-                        new_feat.setAttributes([cell.id(), 1])  # Marca como "Occupied"
-                        prov.addFeature(new_feat)
+        # Adicionar a camada ao projeto
+        QgsProject.instance().addMapLayer(aoo_layer)
 
-                # Adicionar a camada ao projeto
-                QgsProject.instance().addMapLayer(aoo_layer)
-
-                QMessageBox.information(self.iface.mainWindow(), "GeoCATer",
-                                        f"AOO calculado com células de {grid_size_km}x{grid_size_km} km e adicionado ao mapa.")
+        QMessageBox.information(self.iface.mainWindow(), "GeoCATer",
+                                f"AOO calculado com células de {grid_size_km}x{grid_size_km} km e adicionado ao mapa.")
