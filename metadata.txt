@@ -1,0 +1,47 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=GeoCATer
+qgisMinimumVersion=3.0
+description=A QGIS plugin to perform EOO (Extent of Occurrence) and AOO (Area of Occupancy) analysis based on GeoCAT principles
+version=1.0.0
+author=Diego Sousa Campos
+email=camposds1@yahoo.com.br
+
+about=GeoCATer is a QGIS plugin designed to facilitate geospatial conservation assessments directly within the QGIS environment. Inspired by the GeoCAT tool, GeoCATer enables users to calculate critical metrics such as Extent of Occurrence (EOO) and Area of Occupancy (AOO) using species occurrence data. Key Features: CSV Import: Import species occurrence data (coordinates and scientific names) from CSV files. EOO Calculation: Automatically calculate the Extent of Occurrence using the Convex Hull method. AOO Calculation: Generate Area of Occupancy by creating a grid and calculating the number of occupied cells. The plugin is designed to assist conservation biologists, researchers, and GIS professionals in performing rapid conservation assessments, following guidelines set by the International Union for Conservation of Nature (IUCN). For any questions, bug reports, or contributions, please contact the developer.
+
+tracker=https://github.com/camposds/GeoCATer/issues
+repository=https://github.com/camposds/GeoCATer
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=analysis, csv, ecology, home range, import, layers, point, polygon, vector
+
+homepage=https://github.com/camposds/GeoCATer/blob/main/README.md
+category=Plugins
+icon=icon.png
+# experimental flag
+experimental=True
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
+# Since QGIS 3.8, a comma separated list of plugins to be installed
+# (or upgraded) can be specified.
+# Check the documentation for more information.
+# plugin_dependencies=
+
+Category of the plugin: Raster, Vector, Database or Web
+# category=
+
+# If the plugin can run on QGIS Server.
+server=False
+
